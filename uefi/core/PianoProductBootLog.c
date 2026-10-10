@@ -129,3 +129,37 @@ EFI_STATUS PianoProductBootLogStage(CONST CHAR8 *Name,EFI_STATUS Status,UINT64 E
   return DrawRow(Row,State(Status),Elapsed,
     Status==EFI_SUCCESS||Status==EFI_NOT_STARTED?"--":Code);
 }
+
+EFI_STATUS PianoProductBootLogVisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,UINT32 NativeIndex){
+  // Intentional full-screen color replacement: this is a temporary binary
+  // diagnostic, not a user-facing GUI or hardware scanout readiness test.
+  if(Phase>PianoProbeBeforeMenu||NativeIndex>63)return EFI_INVALID_PARAMETER;
+  if(!mCanvas.Gop||!mCanvas.Alive)return EFI_NOT_STARTED;
+  if(mCanvas.Fault!=EFI_SUCCESS)return mCanvas.Fault;
+  if(!mCanvas.Alive())return mCanvas.Fault=EFI_ABORTED;
+  STATIC CONST UINT8 Rgb[][3]={
+    {0,150,240},   // Before foundation: blue
+    {175,30,165},  // Native before StartImage: purple
+    {245,115,0},   // Native after StartImage: orange
+    {0,175,75},    // After all foundation drivers: green
+    {0,180,190},   // After UFS: cyan
+    {200,35,45},   // After USB: red
+    {20,35,125}    // Before policy/menu: navy
+  };
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL Background=Color(Rgb[Phase][0],Rgb[Phase][1],Rgb[Phase][2]);
+  EFI_STATUS S=Rect(Background,0,0,mCanvas.Width,mCanvas.Height);
+  if(S!=EFI_SUCCESS)return S;
+  // Width >=480 and height >=320 from Initialize. Each large tile is wholly
+  // bounded and human-decodable from a camera recording without USB.
+  UINT32 Side=mCanvas.Width/12;
+  UINT32 Height=mCanvas.Height/8;
+  UINT32 Top=(mCanvas.Height-Height)/2;
+  UINT32 First=(mCanvas.Width-11*Side)/2;
+  for(UINT32 Bit=0;Bit<6;++Bit) {
+    EFI_GRAPHICS_OUTPUT_BLT_PIXEL Tile=
+      (NativeIndex&(1U<<Bit))?Color(255,255,255):Color(12,12,12);
+    S=Rect(Tile,First+2*Bit*Side,Top,Side,Height);
+    if(S!=EFI_SUCCESS)return S;
+  }
+  return EFI_SUCCESS;
+}

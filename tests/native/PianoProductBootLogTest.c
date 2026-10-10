@@ -117,6 +117,37 @@ int main(int Argc,char **Argv){
     assert(PianoProductBootLogStage("USB",EFI_SUCCESS,1)==Expected);
     Previous=Calls;assert(PianoProductBootLogStage("USB",EFI_SUCCESS,1)==Expected&&Calls==Previous);
   }
+  // The experimental phase probe paints distinct real GOP pixels, encodes a
+  // 6-bit native StartImage ordinal, and never calls GOP SetMode.
+  Reset(800,600);Info.HorizontalResolution=Width;Info.VerticalResolution=Height;
+  assert(PianoProductBootLogInitialize(&Gop,Alive)==EFI_SUCCESS);
+  Previous=Calls;
+  assert(PianoProductBootLogVisualProbe((PIANO_PRODUCT_VISUAL_PHASE)7,0)==EFI_INVALID_PARAMETER&&Calls==Previous);
+  assert(PianoProductBootLogVisualProbe(PianoProbeAfterNative,64)==EFI_INVALID_PARAMETER&&Calls==Previous);
+  assert(PianoProductBootLogVisualProbe(PianoProbeBeforeFoundation,0)==EFI_SUCCESS&&Calls==Previous+7);
+  assert(Pixels[0].Red==0&&Pixels[0].Green==150&&Pixels[0].Blue==240);
+  UINT32 Side=Width/12,TileX=(Width-11*Side)/2,TileY=(Height-Height/8)/2;
+  for(UINTN Bit=0;Bit<6;++Bit){
+    EFI_GRAPHICS_OUTPUT_BLT_PIXEL Tile=Pixels[TileY*Width+TileX+(2*Bit)*Side];
+    assert(Tile.Red==12&&Tile.Green==12&&Tile.Blue==12);
+  }
+  assert(PianoProductBootLogVisualProbe(PianoProbeAfterNative,13)==EFI_SUCCESS);
+  assert(Pixels[0].Red==245&&Pixels[0].Green==115&&Pixels[0].Blue==0);
+  for(UINTN Bit=0;Bit<6;++Bit){
+    EFI_GRAPHICS_OUTPUT_BLT_PIXEL Tile=Pixels[TileY*Width+TileX+(2*Bit)*Side];
+    UINT8 Expected=(13U&(1U<<Bit))?255:12;
+    assert(Tile.Red==Expected&&Tile.Green==Expected&&Tile.Blue==Expected);
+  }
+  // Failure/warnings are sticky; never paint more pixels after a bad Blt.
+  FailAt=Calls+3;Inject=EFI_WARN_UNKNOWN_GLYPH;Previous=Calls;
+  assert(PianoProductBootLogVisualProbe(PianoProbeAfterUsb,2)==EFI_DEVICE_ERROR);
+  UINT32 FailedCalls=Calls;assert(FailedCalls==Previous+3);
+  assert(PianoProductBootLogVisualProbe(PianoProbeAfterUsb,2)==EFI_DEVICE_ERROR&&Calls==FailedCalls);
+  Reset(800,600);Info.HorizontalResolution=Width;Info.VerticalResolution=Height;
+  assert(PianoProductBootLogInitialize(&Gop,Alive)==EFI_SUCCESS);
+  LoseAt=Calls+2;
+  assert(PianoProductBootLogVisualProbe(PianoProbeBeforeNative,1)==EFI_ABORTED);
+  FailedCalls=Calls;assert(PianoProductBootLogVisualProbe(PianoProbeBeforeNative,1)==EFI_ABORTED&&Calls==FailedCalls);
   Reset(800,600);Info.HorizontalResolution=Width;Info.VerticalResolution=Height;FailAt=10;Inject=EFI_NOT_READY;
   assert(PianoProductBootLogInitialize(&Gop,Alive)==EFI_NOT_READY);Previous=Calls;
   assert(PianoProductBootLogStage("DISPLAY",EFI_SUCCESS,0)==EFI_NOT_READY&&Calls==Previous);

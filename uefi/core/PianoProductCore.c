@@ -96,6 +96,23 @@ STATIC VOID BootLogReturned(VOID) {
     mBootLogExitEvent=NULL;
   }
 }
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+STATIC UINT32 mVisualNativeIndex;
+STATIC VOID VisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,CONST CHAR8 *NativeName,UINT32 PauseUs){
+  if(!BootLogAlive())FailStop(EFI_ABORTED);
+  if(Phase==PianoProbeBeforeNative && mVisualNativeIndex<63)++mVisualNativeIndex;
+  EFI_STATUS Paint=PianoProductBootLogVisualProbe(Phase,mVisualNativeIndex);
+  if(!BootLogAlive())FailStop(EFI_ABORTED);
+  DEBUG((DEBUG_WARN,"PIANO_VISUAL_PROBE phase=%u index=%u driver=%a blt=%r pause_us=%u scanout_unverified=1\n",
+    (UINT32)Phase,mVisualNativeIndex,NativeName?NativeName:"none",Paint,PauseUs));
+  // The GOP call is diagnostic only: an EFI_SUCCESS does not prove physical
+  // scanout. No modeset, clock, power, memory map or driver start changes.
+  if(PauseUs && Paint==EFI_SUCCESS){
+    gBS->Stall(PauseUs);
+    if(!BootLogAlive())FailStop(EFI_ABORTED);
+  }
+}
+#endif
 STATIC EFI_STATUS ProductDebugReplay(VOID *Context) {
   if(Context!=NULL)return EFI_INVALID_PARAMETER;
   EFI_STATUS Memory=PianoProductSmemReemit(NULL);
@@ -133,6 +150,9 @@ STATIC VOID ObserveDisplay(CONST CHAR8 *Phase) {
 STATIC VOID ObserveNative(CONST CHAR8 *Name,BOOLEAN Before) {
   CHAR8 Phase[32];
   if(Name==NULL)FailStop(EFI_INVALID_PARAMETER);
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  VisualProbe(Before?PianoProbeBeforeNative:PianoProbeAfterNative,Name,500000);
+#endif
   AsciiSPrint(Phase,sizeof(Phase),"%a:%a",Before?"pre":"post",Name);
   EFI_STATUS Status=PianoDisplaySmmuObserve(Phase,BootLogAlive);
   if(!BootLogAlive())FailStop(EFI_ABORTED);
@@ -231,6 +251,9 @@ EFI_STATUS EFIAPI PianoProductCoreEntry(EFI_HANDLE Image,EFI_SYSTEM_TABLE *Syste
   if(Status==EFI_SUCCESS && Fdt==NULL)Status=EFI_COMPROMISED_DATA;
   BootLogStage("PAYLOAD",Status);
   if(Status!=EFI_SUCCESS){BootLogReturned();return Status;}
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  VisualProbe(PianoProbeBeforeFoundation,NULL,3500000);
+#endif
   ReportRequiredBackends();
   (VOID)PianoProductBootObjectsReemit(BootLogAlive);
   if(!BootLogAlive())FailStop(EFI_ABORTED);
@@ -239,6 +262,9 @@ EFI_STATUS EFIAPI PianoProductCoreEntry(EFI_HANDLE Image,EFI_SYSTEM_TABLE *Syste
   PianoProbeFoundation();
   PianoNativeSetObserver(NULL);
   if(!BootLogAlive())FailStop(EFI_ABORTED);
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  VisualProbe(PianoProbeAfterFoundation,NULL,3500000);
+#endif
   ObserveDisplay("after-foundation");
   mDisplayStartup=(PIANO_PRODUCT_DISPLAY_STARTUP_REPORT){.Revision=1,.KnownNoSideEffects=TRUE,.Status=EFI_NOT_STARTED};
   DEBUG((DEBUG_WARN,"PIANO_PRODUCT_DISPLAY_START status=%r inherited_gop=1 display_owner_refs=0 native_cesta_retention=7 display_cesta_auto_init_deferred=1 display_pll_auto_init_deferred=1 native_refs_exit_release_verified=0\n",mDisplayStartup.Status));
@@ -277,6 +303,9 @@ EFI_STATUS EFIAPI PianoProductCoreEntry(EFI_HANDLE Image,EFI_SYSTEM_TABLE *Syste
   // action. Product never relies on an inherited ABL clock being sufficient.
   BootLogStage("UFS",EFI_NOT_STARTED);
   PianoUfsSetProbeAction(InitUfs);PianoProbeUfs(Fdt);BootLogStage("UFS",mUfsStatus);
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  VisualProbe(PianoProbeAfterUfs,NULL,1000000);
+#endif
   ObserveDisplay("after-ufs");
   DEBUG((DEBUG_WARN,"PIANO_PRODUCT_UFS_START attempted=%u status=%r started=%u original_media_readonly=1\n",mUfsAttempted,mUfsStatus,mUfsStarted));
   if(!mUfsAttempted || !mUfsStarted)FailStop(mUfsStatus);
@@ -302,6 +331,9 @@ EFI_STATUS EFIAPI PianoProductCoreEntry(EFI_HANDLE Image,EFI_SYSTEM_TABLE *Syste
   BootLogStage("USB",EFI_NOT_STARTED);
   Status=PianoRawLinuxRegister(Image,SystemTable);if(Status!=EFI_SUCCESS)FailStop(Status);
   Status=PianoUsbControllerServiceStart(Fdt,&UsbConfig);BootLogStage("USB",Status);
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  VisualProbe(PianoProbeAfterUsb,NULL,500000);
+#endif
   BOOLEAN UsbStarted=Status==EFI_SUCCESS;
   DEBUG((DEBUG_WARN,"PIANO_PRODUCT_USB_START status=%r resident_service=%u foreground_loop=0\n",Status,UsbStarted));
   if(!UsbStarted){
@@ -310,6 +342,9 @@ EFI_STATUS EFIAPI PianoProductCoreEntry(EFI_HANDLE Image,EFI_SYSTEM_TABLE *Syste
     DEBUG((DEBUG_WARN,"PIANO_PRODUCT_USB_STARTUP_ROLLBACK start_status=%r proof_status=%r esp_boot_available=1 usb_available=0\n",Status,Proof));
   }
   ObserveDisplay("after-usb");
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  VisualProbe(PianoProbeBeforeMenu,NULL,1000000);
+#endif
   BootLogStage("MENU",EFI_NOT_STARTED);
   Status=PianoBootPolicyInitialize(Image);if(Status!=EFI_SUCCESS)FailStop(Status);
   // Fdt was validated against the BootShim handoff and mapped input at PAYLOAD.

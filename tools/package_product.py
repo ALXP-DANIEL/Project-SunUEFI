@@ -15,6 +15,7 @@ from build_integrity import validate as validate_build
 from product_contract import ROOT,validate,validate_build_manifest
 from simpleinit_build_identity import inspect as inspect_simpleinit
 from product_application import selected as selected_product_application, verify_payload
+from prepare_product import VISUAL_PHASE_PROBE
 from firmware_workspace import active_root
 
 
@@ -29,12 +30,19 @@ def main():
     contract=validate(json.loads((root/'config/piano-product.json').read_text()))
     prepared=json.loads((root/'build/product/prepared-manifest.json').read_text())
     validate_build_manifest(contract,prepared)
+    if prepared.get('visual_phase_probe')!=VISUAL_PHASE_PROBE or prepared.get('status')!='INCOMPLETE_NOT_RELEASE':
+        raise ValueError('Experimental visual probe identity/release status changed')
+    product_dsc=(ws/'Platforms/Xiaomi/pianoProductPkg/pianoProduct.dsc').read_text()
+    if product_dsc.count('-DPIANO_EXPERIMENT_DISPLAY_PHASE_PROBE=1')!=1:
+        raise ValueError('Visual probe must be compiled into exactly one product DSC')
     if set(prepared['backends'])!=set(contract['features']):raise ValueError('Product backend disclosure incomplete')
     app=root/'artifacts/simpleinit/product'
     identity=inspect_simpleinit(root/'build/simpleinit-product-edk2',app,True)
     if identity!=prepared['simpleinit'] or identity!=json.loads((app/'build-ok.json').read_text()):raise ValueError('Product application identity changed')
     core=ws/'Build/pianoProductPkg/DEBUG_CLANGPDB/AARCH64/pianoProductPkg/Applications/ProductCore/ProductCore'
     core_make=(core/'GNUmakefile').read_text()
+    if 'PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE=1' not in core_make:
+        raise ValueError('Product Core was compiled without the requested visual probe')
     if 'PianoProductPumpLib/PianoProductPumpLib/OUTPUT/PianoProductPumpLib.lib' not in core_make:raise ValueError('Product core linked the wrong Pump library')
     dxe_make=ws/'Build/pianoProductPkg/DEBUG_CLANGPDB/AARCH64/MdeModulePkg/Core/Dxe/DxeMain/GNUmakefile'
     if 'PianoProductPumpLib/PianoProductPumpLib/OUTPUT/PianoProductPumpLib.lib' not in dxe_make.read_text():raise ValueError('Product DXE Core linked Null service pump')
