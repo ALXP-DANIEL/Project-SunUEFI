@@ -12,6 +12,7 @@ from product_contract import ROOT, validate
 from prepare_product_pump import prepare as prepare_pump
 from product_payload_digest import digest_header
 from simpleinit_build_identity import inspect as inspect_simpleinit
+from product_application import selected as selected_product_application, payload_for, verify_payload
 from prepare_gui_profile import SETUP_DSC_ADDITIONS, SETUP_FV_MODULES
 from prepare_product_early_memory import prepare as prepare_early_memory, verify as verify_early_memory
 from prepare_product_handoff import prepare as prepare_handoff, stage_provider, verify_provider
@@ -371,9 +372,11 @@ def prepare(root=ROOT):
     product_app=root/'artifacts/simpleinit/product'
     simpleinit=inspect_simpleinit(root/'build/simpleinit-product-edk2',product_app,True)
     if json.loads((product_app/'build-ok.json').read_text())!=simpleinit:raise ValueError('Product SimpleInit build identity stale')
-    header,app_identity=digest_header(product_app/'SimpleInit.efi')
-    raw=(product_app/'SimpleInit.efi').read_bytes()
-    (product_app/'app-payload.bin').write_bytes(struct.pack('<16sIIQ32s',b'SUNUEFI-APPv1\0',1,64,len(raw),hashlib.sha256(raw).digest())+raw)
+    selected_app,header,app_identity=selected_product_application(root)
+    raw=selected_app.read_bytes()
+    payload=payload_for(raw)
+    verify_payload(raw,payload)
+    (product_app/'app-payload.bin').write_bytes(payload)
     target=root/'uefi/platforms/pianoProductPkg'
     if target.exists():shutil.rmtree(target)
     shutil.copytree(root/'uefi/platforms/pianoProbePkg',target)
@@ -479,10 +482,14 @@ def prepare(root=ROOT):
     manifest={'target':'product','artifact':contract['artifact'],'status':'INCOMPLETE_NOT_RELEASE',
       'features':contract['features'],'shared_core':True,'entry_points':contract['entry_points'],'entry_policy_only':True,
       'fastboot_mode':'resident_background','fastboot_surfaces':contract['fastboot']['available_in'],
-      'default_application':'SimpleInit','setup_key':'F12','diagnostic_reboot_timer':False,
+      'default_application':'PianoBoot','setup_key':'F12','diagnostic_reboot_timer':False,
       'backend_initialization_required':True,'backends':backend_status(),'runtime_readiness':'NOT_PRODUCT_DEVICE_VALIDATED',
       'service_compile_flags':list(PRODUCT_FLAGS),'sources':list((*SOURCE_NAMES,*OS_BOOT_INF_SOURCES,*OBSERVATION_INF_SOURCES)),'native_foundation':native_id,'os_boot':os_boot,'dxe_observation':observation,'early_memory':early_memory,
-      'simpleinit':simpleinit,'simpleinit_payload':app_identity,'ui_hooks':ui,'pump_hooks':prepare_pump(root,apply=False),
+      'simpleinit':simpleinit,'simpleinit_payload':app_identity,
+      'hosted_pianoboot':{'path':str(selected_app.relative_to(root)),
+                          'sha256':app_identity['sha256'],'bytes':app_identity['app_bytes'],
+                          'prebuilt_application':True,'device_validated':False},
+      'ui_hooks':ui,'pump_hooks':prepare_pump(root,apply=False),
       'low_memory_contract':low_memory_contract,
       'display_mapping':display_contract,
       'native_late_handoff':handoff_hooks,'late_provider':late_provider,

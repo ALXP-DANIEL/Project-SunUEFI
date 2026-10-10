@@ -14,6 +14,7 @@ from analyze_capture import parse_fdt
 from build_integrity import validate as validate_build
 from product_contract import ROOT,validate,validate_build_manifest
 from simpleinit_build_identity import inspect as inspect_simpleinit
+from product_application import selected as selected_product_application, verify_payload
 from firmware_workspace import active_root
 
 
@@ -47,7 +48,15 @@ def main():
         if not struct.unpack_from('<I',path.read_bytes(),44)[0]&4:raise ValueError('Product FV READ_STATUS is clear')
     nodes=parse_fdt(dtb.read_bytes())
     if any(key in nodes.get('/chosen',{})for key in ('linux,initrd-start','linux,initrd-end','kaslr-seed','rng-seed')):raise ValueError('Stale packaged DT handoff')
-    payload=(app/'app-payload.bin').read_bytes();raw=(app/'SimpleInit.efi').read_bytes()
+    selected_app,_,app_identity=selected_product_application(root)
+    if prepared.get('default_application')!='PianoBoot' or prepared.get('simpleinit_payload')!=app_identity:
+        raise ValueError('Prepared PianoBoot application identity changed')
+    if prepared.get('hosted_pianoboot')!={'path':str(selected_app.relative_to(root)),
+                                         'sha256':app_identity['sha256'],'bytes':app_identity['app_bytes'],
+                                         'prebuilt_application':True,'device_validated':False}:
+        raise ValueError('Prepared PianoBoot source binding changed')
+    payload=(app/'app-payload.bin').read_bytes();raw=selected_app.read_bytes()
+    verify_payload(raw,payload)
     magic,version,header,app_bytes,digest=struct.unpack_from('<16sIIQ32s',payload)
     if magic!=b'SUNUEFI-APPv1\0'.ljust(16,b'\0')or version!=1 or header!=64 or app_bytes!=len(raw)or payload[64:]!=raw or digest!=hashlib.sha256(raw).digest():raise ValueError('Product APPv1 payload mismatch')
     kernel=out/'product-kernel.bin';kernel.write_bytes(gzip.compress(shim_bytes+fd_bytes,mtime=0)+dtb.read_bytes())

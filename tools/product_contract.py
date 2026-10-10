@@ -20,7 +20,7 @@ def validate(data):
     if set(features)!=FEATURES or any(value is not True for value in features.values()):
         raise ValueError('Product cannot omit or silently disable a required feature')
     boot=data.get('boot_policy',{})
-    if boot.get('splash')!='TianoCore' or boot.get('default_application')!='SimpleInit' or boot.get('setup_key')!='F12' or \
+    if boot.get('splash')!='TianoCore' or boot.get('default_application') not in ('SimpleInit','PianoBoot') or boot.get('setup_key')!='F12' or \
        boot.get('setup_application')!='TianoCoreUiApp' or boot.get('diagnostic_reboot_timer') is not False:
         raise ValueError('Product boot policy differs from the requested experience')
     fastboot=data.get('fastboot',{})
@@ -40,8 +40,13 @@ def validate_build_manifest(contract,manifest):
         raise ValueError('Built feature set does not match the product')
     if manifest.get('fastboot_mode')!='resident_background' or manifest.get('fastboot_surfaces')!=contract['fastboot']['available_in']:
         raise ValueError('Foreground USB experiment is not product fastboot')
-    if manifest.get('default_application')!='SimpleInit' or manifest.get('setup_key')!='F12':
+    if manifest.get('default_application')!=contract['boot_policy']['default_application'] or manifest.get('setup_key')!='F12':
         raise ValueError('Missing product supervisor policy')
+    if manifest['default_application']=='PianoBoot':
+        from product_application import EXPECTED_SHA256
+        selected=manifest.get('hosted_pianoboot',{})
+        if selected.get('sha256')!=EXPECTED_SHA256 or selected.get('device_validated') is not False:
+            raise ValueError('PianoBoot experiment must bind pinned unvalidated application')
     if manifest.get('diagnostic_reboot_timer') is not False:
         raise ValueError('Diagnostic reboot timer must not ship')
     if manifest.get('backend_initialization_required') is not True:

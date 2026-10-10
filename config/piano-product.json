@@ -6,7 +6,7 @@
   "entry_policy_only": true,
   "boot_policy": {
     "splash": "TianoCore",
-    "default_application": "SimpleInit",
+    "default_application": "PianoBoot",
     "setup_key": "F12",
     "setup_application": "TianoCoreUiApp",
     "diagnostic_reboot_timer": false
