@@ -12,7 +12,7 @@ import struct
 from product_payload_digest import digest_header
 
 RELATIVE = Path("uefi/applications/PianoBoot.efi")
-EXPECTED_SHA256 = "c95e79c1b235ae1b8b91d29db66ef4e873cf6f477a19f8434ce59e2794460d9d"
+EXPECTED_SHA256 = "b87410a92aeea6a6c07d7edefe6b51e1c3cae4bee8a7f4951eec3467848688a9"
 MAGIC = b"SUNUEFI-APPv1\0".ljust(16, b"\0")
 
 

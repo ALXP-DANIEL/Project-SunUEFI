@@ -7,9 +7,9 @@ packaging rather than trying to boot PianoBoot's unrelated native FD.
 
 It builds and seals the upstream SimpleInit sources as normal but selects
 `uefi/applications/PianoBoot.efi` for the product's APPv1 payload. The
-experimental app is the user's real 24,576-byte ARM64 EFI application from
-PIANO BOOT commit `c34acac`, SHA-256
-`c95e79c1b235ae1b8b91d29db66ef4e873cf6f477a19f8434ce59e2794460d9d`.
+experimental app is the user's real 28,672-byte ARM64 EFI application from
+PIANO BOOT commit `69647c3`, SHA-256
+`b87410a92aeea6a6c07d7edefe6b51e1c3cae4bee8a7f4951eec3467848688a9`.
 
 The `product_application.py` helper checks the exact embedded EFI byte digest
 and architecture/subsystem, generates the 64-byte APPv1 header, and verifies
@@ -18,12 +18,15 @@ with this identity; package_product.py rechecks the exact payload against the
 selected app and the sealed product manifest. No historical SimpleInit build
 receipt is falsified.
 
-The runtime application's cooperative SunUEFI pump integration is **not**
-proved. Unlike SimpleInit, this PianoBoot application was not linked with its
-GUI-loop pump. The physical screen's white transition and persistent USB
-commands may remain broken. We have not proved that the menu renders, that
-firmware reset works under this application, or that the modified product
-preserves every function of upstream SunUEFI.
+The application now probes SunUEFI's optional revision-1 runtime protocol
+and cooperatively calls its service Pump while polling the input keyboard;
+without that protocol it uses its existing UEFI event wait. This avoids the
+previous unbounded wait that could starve the USB service. The modified
+application was rebuilt and passed the ArmVirt/QEMU menu/keyboard/diagnostics
+regression (which does **not** exercise the real SunUEFI provider). Actual
+USB-service pumping, recovery, and the physical white-screen issue are still
+**unvalidated on the tablet**. Do not treat a successful build as evidence
+that the graphical menu will be visible.
 
 For a build on GitHub Actions, select the branch containing this change,
 `Build products` workflow, `uefi` target. The build will emit

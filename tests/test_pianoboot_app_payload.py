@@ -16,14 +16,14 @@ class HostedPianoBootTest(unittest.TestCase):
     def test_real_application_identity(self):
         path, header, identity = selected(ROOT)
         self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), EXPECTED_SHA256)
-        self.assertEqual(identity["app_bytes"], 24576)
-        self.assertIn("PIANO_PRODUCT_SIMPLEINIT_BYTES 24576U", header)
+        self.assertEqual(identity["app_bytes"], 28672)
+        self.assertIn("PIANO_PRODUCT_SIMPLEINIT_BYTES 28672U", header)
 
     def test_complete_app_payload(self):
         path, _, _ = selected(ROOT)
         raw = path.read_bytes()
         payload = payload_for(raw)
-        self.assertEqual(len(payload), 24640)
+        self.assertEqual(len(payload), 28736)
         self.assertTrue(verify_payload(raw, payload))
 
     def test_fail_closed_wrong_app_or_payload(self):
