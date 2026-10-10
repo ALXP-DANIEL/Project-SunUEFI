@@ -152,9 +152,30 @@ static VOID Setup(UINT32 N){Case=N;gBS=&Bs;gDS=&Ds;Bs.RaiseTPL=Raise;Bs.RestoreT
   Policy.Initialized=Policy.ProtocolInstalled=TRUE;Runtime.Revision=1;Runtime.RequestAction=RuntimeRequest;Usb=(PIANO_DWC3_SERVICE_STATUS){.Revision=1,.Started=TRUE,.Phase=PianoUsbServiceListening};Storage=(PIANO_FB_STORAGE){NULL,Ready,InfoStorage,ReadStorage};
   Ufs=(PIANO_UFS_RESET_REPORT){.Started=TRUE,.Prepared=TRUE,.Returned=TRUE,.Clean=TRUE,.TplHeld=TRUE,.DmaFreed=3,.Disconnected=6,.ProtocolsRemoved=7};
 }
-static VOID Run(UINT32 N){Setup(N);PIANO_PRODUCT_DISPLAY_STARTUP_REPORT Start={0};PIANO_PRODUCT_DISPLAY_RETIRE_REPORT Stop={0};
+static VOID Run(UINT32 N){Setup(N==28?4:N==29?2:N);PIANO_PRODUCT_DISPLAY_STARTUP_REPORT Start={0};PIANO_PRODUCT_DISPLAY_RETIRE_REPORT Stop={0};
   if(N==14){assert(PianoProductDisplayStartup(&Start)==EFI_NOT_STARTED&&!Start.Revision);return;}
-  EFI_STATUS S=PianoProductDisplayStart(Alive);PianoProductDisplayStartup(&Start);
+  EFI_STATUS S=N>=27?PianoProductDisplayStartAhbOnly(Alive):PianoProductDisplayStart(Alive);PianoProductDisplayStartup(&Start);
+  if(N==28){
+    assert(S==EFI_DEVICE_ERROR&&Start.Retained&&Start.Held&&Start.AcquireAttempted);
+    assert(!Start.KnownNoSideEffects&&!ReleaseCalls&&!ReaderCloses);
+    assert(!RailInits&&!ChildStarts);
+    return;
+  }
+  if(N==29){
+    assert(S==EFI_NOT_READY&&!Start.Retained&&!Start.Held&&!Start.AcquireAttempted);
+    assert(Start.KnownNoSideEffects&&ReaderCloses==1&&!ReleaseCalls);
+    assert(!RailInits&&!ChildStarts);
+    return;
+  }
+  if(N==27){
+    assert(S==EFI_SUCCESS&&Start.Held&&Start.OwnedReferences==1&&!Start.KnownNoSideEffects);
+    assert(RailInits==0&&RailObservations==0&&ChildStarts==0&&ChildStops==0);
+    assert(Loads==8&&AcquireCalls==1&&Start.AcquireBeforeTotal[0]==5&&Start.AcquireAfterTotal[0]==6);
+    assert(PianoProductDisplayStop(Start.LeaseContext,&Stop)==EFI_SUCCESS);
+    assert(Stop.Clean&&Stop.Released&&Stop.OwnedReferencesBefore==1&&!Stop.OwnedReferencesAfter);
+    assert(ReleaseCalls==1&&ReaderCloses==1&&Loads==12&&!RailCloses);
+    return;
+  }
   if(N==21){assert(S!=EFI_SUCCESS&&Start.Retained&&Start.Held&&RailCloses==1&&!ReleaseCalls);return;}
   if(N==23){assert(S==EFI_DEVICE_ERROR&&Start.Retained&&Start.Held&&ChildStarts==1&&!ChildStops&&!RailCloses&&!ReleaseCalls);return;}
   if(N==0||N==6||N==7||N==8||N==9||N==10||N==11||N==12||N==13||N==17){assert(S==EFI_SUCCESS&&Start.Held&&Start.OwnedReferences==1&&!Start.KnownNoSideEffects&&Start.AcquireBeforeTotal[0]==5&&Start.AcquireAfterTotal[0]==6&&Loads==8&&HandlerCloses==2);}
@@ -190,4 +211,4 @@ static VOID Run(UINT32 N){Setup(N);PIANO_PRODUCT_DISPLAY_STARTUP_REPORT Start={0
   if(N==7||N==9)assert(S==EFI_ABORTED&&Stop.Retained&&Stop.ServicesLost&&!Stop.Clean);
   if(N==8)assert(S==EFI_DEVICE_ERROR&&Stop.Retained&&Stop.Released&&!Stop.HeldAfter&&Stop.Cleanup==EFI_DEVICE_ERROR&&!Stop.Clean);
 }
-int main(VOID){for(UINT32 I=0;I<27;++I){pid_t P=fork();assert(P>=0);if(!P){Run(I);_exit(0);}int S;assert(waitpid(P,&S,0)==P);if(!WIFEXITED(S)||WEXITSTATUS(S)){fprintf(stderr,"display coordinator case%u failed\n",I);return 1;}}puts("Actual display coordinator+Owners+GCC Guard:27 cases; child-first/rail/parent boundaries and verified false-readback rollback; no native hardware executed");return 0;}
+int main(VOID){for(UINT32 I=0;I<30;++I){pid_t P=fork();assert(P>=0);if(!P){Run(I);_exit(0);}int S;assert(waitpid(P,&S,0)==P);if(!WIFEXITED(S)||WEXITSTATUS(S)){fprintf(stderr,"display coordinator case%u failed\n",I);return 1;}}puts("Actual display coordinator+Owners+GCC Guard:30 cases; GCC-only acquire/release, partial failure retention and clean absent; no native hardware executed");return 0;}

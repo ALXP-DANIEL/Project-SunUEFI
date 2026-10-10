@@ -462,7 +462,7 @@ def prepare(root=ROOT):
     text+=SETUP_DSC_ADDITIONS
     # All service flags bind actual product implementations; diagnostics are
     # not dispatched. FETCH enables the shared live SMMU storage guard.
-    text+='\n[BuildOptions]\n  GCC:*_CLANGPDB_AARCH64_CC_FLAGS = '+ ' '.join('-D'+flag for flag in PRODUCT_FLAGS)+'\n'
+    text+='\n[BuildOptions]\n  GCC:*_CLANGPDB_AARCH64_CC_FLAGS = '+ ' '.join('-D'+flag for flag in (*PRODUCT_FLAGS,'PIANO_EXPERIMENT_GCC_AHB_ONLY=1'))+'\n'
     dsc.write_text(text)
     fdf=target/'pianoProduct.fdf';text=fdf.read_text().replace('# Host-only stage-0 diagnostic; NOT hardware validated.','# Single PianoUEFI product integration candidate; INCOMPLETE_NOT_RELEASE.')
     text=text.replace('SiliciumPkg/Drivers/SimpleFbDxe/SimpleFbDxe.inf','pianoProductPkg/Drivers/PianoGopDxe/PianoGopDxe.inf')
@@ -492,6 +492,11 @@ def prepare(root=ROOT):
       'ui_hooks':ui,'pump_hooks':prepare_pump(root,apply=False),
       'low_memory_contract':low_memory_contract,
       'display_mapping':display_contract,
+      'experimental_gcc_ahb_only':{
+         'enabled':True,
+         'scope':'Native typed GCC DISP_AHB clock reference; no non-GDSC child or rail operation',
+         'physical_panel_validated':False,
+         'hardware_side_effects_possible':True},
       'native_late_handoff':handoff_hooks,'late_provider':late_provider,
       'vendor_inputs':vendor_record,
       'platform_files':{str(path.relative_to(target)):sha(path)for path in sorted(target.rglob('*'))if path.is_file()},
