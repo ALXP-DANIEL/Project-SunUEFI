@@ -1,5 +1,14 @@
 # HALIOMMU startup boundary: next display diagnostic
 
+**CORRECTION (after video IMG_9664.MOV):** The original document below
+incorrectly equated static entry13 with runtime launch ordinal13. The
+dependency-based scheduler started HALIOMMU at **actual ordinal10**, confirmed
+by the lime-green after-StartImage marker with binary tiles 010100 (LSB
+first). HALIOMMU returned with physical scanout still updating. The last
+visible purple marker was actual ordinal13 for a **different, as-yet unnamed
+driver**. See `docs/PIANOBOOT_NATIVE_ORDINAL13_PROBE.md` for the corrected
+record and follow-up implementation.
+
 **Status: INCOMPLETE_NOT_RELEASE, offline candidate; physical test pending.**
 
 The operator's recorded visual-stage sequence reached purple marker

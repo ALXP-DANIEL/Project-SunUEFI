@@ -35,6 +35,10 @@ class ProductVisualProbeWiring(unittest.TestCase):
         self.assertIn('AsciiStrCmp(Name,"HALIOMMU")==0',core)
         self.assertIn('PianoProbeImmediatelyBeforeStartImage',core)
         self.assertIn('PianoProbeImmediatelyAfterStartImage',core)
+        self.assertIn('mVisualNativeIndex==13',core)
+        self.assertIn('PianoProductBootLogVisualLabel(NativeName)',core)
+        self.assertIn('PianoProbeAfterPostObserver',core)
+        self.assertIn('mVisualNativeIndex==13))',core)
         self.assertLess(native.index('if(mNativeObserver)mNativeObserver(Image->Name,TRUE);'),
                         native.index('if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,TRUE);'))
         self.assertLess(native.index('if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,TRUE);'),

@@ -108,3 +108,10 @@ The follow-up `experiment/pianoboot-haliommu-bracket` only adds explicit
 colored GOP witnesses on both sides of the *actual* HALIOMMU StartImage.
 It does not skip HALIOMMU, change MMIO/clock/GOP mode, or continue to
 DMA-capable UFS/USB with missing IOMMU initialization.
+
+**Later correction after IMG_9664.MOV:** The initial hypothesis that purple
+ordinal13 corresponded to HALIOMMU was wrong. The green return witness
+in the second recording shows HALIOMMU at runtime ordinal10, followed by
+purple/orange ordinals11 and12 and the final purple ordinal13. See
+`PIANOBOOT_NATIVE_ORDINAL13_PROBE.md`. Static table position does not
+identify execution order for this dependency scheduler.

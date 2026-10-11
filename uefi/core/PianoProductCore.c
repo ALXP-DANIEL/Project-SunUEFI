@@ -103,6 +103,8 @@ STATIC VOID VisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,CONST CHAR8 *NativeName
   if(!BootLogAlive())FailStop(EFI_ABORTED);
   if(Phase==PianoProbeBeforeNative && mVisualNativeIndex<63)++mVisualNativeIndex;
   EFI_STATUS Paint=PianoProductBootLogVisualProbe(Phase,mVisualNativeIndex);
+  if(Paint==EFI_SUCCESS && mVisualNativeIndex==13 && NativeName!=NULL)
+    Paint=PianoProductBootLogVisualLabel(NativeName);
   if(!BootLogAlive())FailStop(EFI_ABORTED);
   DEBUG((DEBUG_WARN,"PIANO_VISUAL_PROBE phase=%u index=%u driver=%a blt=%r pause_us=%u scanout_unverified=1\n",
     (UINT32)Phase,mVisualNativeIndex,NativeName?NativeName:"none",Paint,PauseUs));
@@ -114,10 +116,10 @@ STATIC VOID VisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,CONST CHAR8 *NativeName
   }
 }
 STATIC VOID ObserveLaunchBoundary(CONST CHAR8 *Name,BOOLEAN Before) {
-  // Only the identified HALIOMMU boundary gets extra GOP operations.
-  // Purple #13 precedes three read-only pre-start observers; yellow #13
-  // proves they returned. Lime #13 proves StartImage returned as well.
-  if(Name!=NULL && AsciiStrCmp(Name,"HALIOMMU")==0)
+  // HALIOMMU visibly starts at ordinal10, not ordinal13. The native
+  // scheduler is dependency-driven: brace actual ordinal13 as well, rather
+  // than conflating its table index with the real launch sequence.
+  if(Name!=NULL && (AsciiStrCmp(Name,"HALIOMMU")==0 || mVisualNativeIndex==13))
     VisualProbe(Before?PianoProbeImmediatelyBeforeStartImage:
       PianoProbeImmediatelyAfterStartImage,Name,1500000);
 }
@@ -172,6 +174,10 @@ STATIC VOID ObserveNative(CONST CHAR8 *Name,BOOLEAN Before) {
   Status=PianoDisplayClockObserve(Phase,BootLogAlive);
   if(!BootLogAlive())FailStop(EFI_ABORTED);
   if(PianoDisplayClockRetained())FailStop(Status==EFI_SUCCESS?EFI_COMPROMISED_DATA:Status);
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  if(!Before && mVisualNativeIndex==13)
+    VisualProbe(PianoProbeAfterPostObserver,Name,1500000);
+#endif
 }
 STATIC VOID ReportRequiredBackends(VOID) {
   // Required remains true. Missing real hardware/startup is visible rather

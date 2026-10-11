@@ -46,7 +46,9 @@ VISUAL_PHASE_PROBE={
     'method':'Inherited GOP EfiBltVideoFill; no SetMode, MMIO or direct framebuffer writes',
     'phases':['before-foundation','before-native','after-native','after-foundation',
               'after-ufs','after-usb','before-menu',
-              'immediately-before-HALIOMMU-StartImage','immediately-after-HALIOMMU-StartImage'],
+              'immediately-before-StartImage','immediately-after-StartImage',
+              'after-ordinal13-post-observers'],
+    'native_ordinal13_label':True,
     'native_ordinal_tiles':6,'physical_scanout_validated':False,
     'physical_test_performed':False,'release_allowed':False}
 NATIVE_NAMES=('SmemDxe','DALSys','ChipInfo','PlatformInfoDxeDriver','HWIODxeDriver','ULogDxe',

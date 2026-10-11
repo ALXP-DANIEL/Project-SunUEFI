@@ -133,7 +133,7 @@ EFI_STATUS PianoProductBootLogStage(CONST CHAR8 *Name,EFI_STATUS Status,UINT64 E
 EFI_STATUS PianoProductBootLogVisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,UINT32 NativeIndex){
   // Intentional full-screen color replacement: this is a temporary binary
   // diagnostic, not a user-facing GUI or hardware scanout readiness test.
-  if(Phase>PianoProbeImmediatelyAfterStartImage||NativeIndex>63)return EFI_INVALID_PARAMETER;
+  if(Phase>PianoProbeAfterPostObserver||NativeIndex>63)return EFI_INVALID_PARAMETER;
   if(!mCanvas.Gop||!mCanvas.Alive)return EFI_NOT_STARTED;
   if(mCanvas.Fault!=EFI_SUCCESS)return mCanvas.Fault;
   if(!mCanvas.Alive())return mCanvas.Fault=EFI_ABORTED;
@@ -146,7 +146,8 @@ EFI_STATUS PianoProductBootLogVisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,UINT3
     {200,35,45},   // After USB: red
     {20,35,125},   // Before policy/menu: navy
     {240,225,0},   // Exact StartImage entry: yellow
-    {100,255,90}   // Exact StartImage return: bright lime
+    {100,255,90},  // Exact StartImage return: bright lime
+    {0,240,170}    // Post-driver observers completed: mint/teal
   };
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL Background=Color(Rgb[Phase][0],Rgb[Phase][1],Rgb[Phase][2]);
   EFI_STATUS S=Rect(Background,0,0,mCanvas.Width,mCanvas.Height);
@@ -164,4 +165,23 @@ EFI_STATUS PianoProductBootLogVisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,UINT3
     if(S!=EFI_SUCCESS)return S;
   }
   return EFI_SUCCESS;
+}
+
+EFI_STATUS PianoProductBootLogVisualLabel(CONST CHAR8 *Name) {
+  if(Name==NULL)return EFI_INVALID_PARAMETER;
+  // All native names originate in the pinned static native image table.
+  // Reject oversized names instead of painting outside the inherited GOP.
+  UINT32 Characters=0;
+  while(Characters<24 && Name[Characters]!=0)++Characters;
+  if(Characters==0 || Characters==24)return EFI_INVALID_PARAMETER;
+  if(!mCanvas.Gop||!mCanvas.Alive)return EFI_NOT_STARTED;
+  if(mCanvas.Fault!=EFI_SUCCESS)return mCanvas.Fault;
+  if(!mCanvas.Alive())return mCanvas.Fault=EFI_ABORTED;
+  UINT32 Scale=mCanvas.Scale*3;
+  UINT32 TextW=(Characters*6+2)*Scale,TextH=10*Scale;
+  UINT32 X=mCanvas.Width/12,Y=mCanvas.Height/9;
+  if(TextW>mCanvas.Width-X || TextH>mCanvas.Height-Y)return EFI_BAD_BUFFER_SIZE;
+  EFI_STATUS S=Rect(Color(255,255,255),X,Y,TextW,TextH);
+  if(S!=EFI_SUCCESS)return S;
+  return Text(Name,X+Scale,Y+Scale,Color(12,12,12));
 }

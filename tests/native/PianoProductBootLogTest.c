@@ -122,7 +122,7 @@ int main(int Argc,char **Argv){
   Reset(800,600);Info.HorizontalResolution=Width;Info.VerticalResolution=Height;
   assert(PianoProductBootLogInitialize(&Gop,Alive)==EFI_SUCCESS);
   Previous=Calls;
-  assert(PianoProductBootLogVisualProbe((PIANO_PRODUCT_VISUAL_PHASE)9,0)==EFI_INVALID_PARAMETER&&Calls==Previous);
+  assert(PianoProductBootLogVisualProbe((PIANO_PRODUCT_VISUAL_PHASE)10,0)==EFI_INVALID_PARAMETER&&Calls==Previous);
   assert(PianoProductBootLogVisualProbe(PianoProbeAfterNative,64)==EFI_INVALID_PARAMETER&&Calls==Previous);
   assert(PianoProductBootLogVisualProbe(PianoProbeBeforeFoundation,0)==EFI_SUCCESS&&Calls==Previous+7);
   assert(Pixels[0].Red==0&&Pixels[0].Green==150&&Pixels[0].Blue==240);
@@ -142,11 +142,24 @@ int main(int Argc,char **Argv){
   assert(Pixels[0].Red==240&&Pixels[0].Green==225&&Pixels[0].Blue==0);
   assert(PianoProductBootLogVisualProbe(PianoProbeImmediatelyAfterStartImage,13)==EFI_SUCCESS);
   assert(Pixels[0].Red==100&&Pixels[0].Green==255&&Pixels[0].Blue==90);
+  assert(PianoProductBootLogVisualProbe(PianoProbeAfterPostObserver,13)==EFI_SUCCESS);
+  assert(Pixels[0].Red==0&&Pixels[0].Green==240&&Pixels[0].Blue==170);
+  assert(PianoProductBootLogVisualLabel(NULL)==EFI_INVALID_PARAMETER);
+  assert(PianoProductBootLogVisualLabel("")==EFI_INVALID_PARAMETER);
+  assert(PianoProductBootLogVisualLabel("ABCDEFGHIJKLMNOPQRSTUVWX")==EFI_INVALID_PARAMETER);
+  Previous=Calls;assert(PianoProductBootLogVisualLabel("ClockDxe")==EFI_SUCCESS&&Calls>Previous);
+  UINT32 TextScale=Pitch/10*3,LabelX=Width/12,LabelY=Height/9;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL LabelBackground=Pixels[LabelY*Width+LabelX];
+  assert(LabelBackground.Red==255&&LabelBackground.Green==255&&LabelBackground.Blue==255);
+  // The first character C has a lit pixel at column0, row1.
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL GlyphPixel=Pixels[(LabelY+2*TextScale)*Width+LabelX+TextScale];
+  assert(GlyphPixel.Red==12&&GlyphPixel.Green==12&&GlyphPixel.Blue==12);
   // Failure/warnings are sticky; never paint more pixels after a bad Blt.
   FailAt=Calls+3;Inject=EFI_WARN_UNKNOWN_GLYPH;Previous=Calls;
   assert(PianoProductBootLogVisualProbe(PianoProbeAfterUsb,2)==EFI_DEVICE_ERROR);
   UINT32 FailedCalls=Calls;assert(FailedCalls==Previous+3);
   assert(PianoProductBootLogVisualProbe(PianoProbeAfterUsb,2)==EFI_DEVICE_ERROR&&Calls==FailedCalls);
+  assert(PianoProductBootLogVisualLabel("ClockDxe")==EFI_DEVICE_ERROR&&Calls==FailedCalls);
   Reset(800,600);Info.HorizontalResolution=Width;Info.VerticalResolution=Height;
   assert(PianoProductBootLogInitialize(&Gop,Alive)==EFI_SUCCESS);
   LoseAt=Calls+2;
