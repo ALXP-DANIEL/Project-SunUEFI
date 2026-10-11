@@ -46,8 +46,8 @@ STATIC CONST UINT8 *Glyph(CHAR8 Ch){
   if(Ch>='0'&&Ch<='9')return mDigits[Ch-'0'];
   return Ch=='-'?Dash:Space;
 }
-STATIC EFI_STATUS Text(CONST CHAR8 *String,UINT32 X,UINT32 Y,EFI_GRAPHICS_OUTPUT_BLT_PIXEL Pixel){
-  UINT32 Scale=mCanvas.Scale;
+STATIC EFI_STATUS TextScaled(CONST CHAR8 *String,UINT32 X,UINT32 Y,
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL Pixel,UINT32 Scale){
   for(UINT32 I=0;String[I];++I){
     CONST UINT8 *G=Glyph(String[I]);
     for(UINT32 Column=0;Column<5;++Column){
@@ -62,6 +62,9 @@ STATIC EFI_STATUS Text(CONST CHAR8 *String,UINT32 X,UINT32 Y,EFI_GRAPHICS_OUTPUT
     }
   }
   return EFI_SUCCESS;
+}
+STATIC EFI_STATUS Text(CONST CHAR8 *String,UINT32 X,UINT32 Y,EFI_GRAPHICS_OUTPUT_BLT_PIXEL Pixel){
+  return TextScaled(String,X,Y,Pixel,mCanvas.Scale);
 }
 STATIC BOOLEAN Equal(CONST CHAR8 *A,CONST CHAR8 *B){
   while(*A&&*A==*B){++A;++B;}return *A==*B;
@@ -183,5 +186,5 @@ EFI_STATUS PianoProductBootLogVisualLabel(CONST CHAR8 *Name) {
   if(TextW>mCanvas.Width-X || TextH>mCanvas.Height-Y)return EFI_BAD_BUFFER_SIZE;
   EFI_STATUS S=Rect(Color(255,255,255),X,Y,TextW,TextH);
   if(S!=EFI_SUCCESS)return S;
-  return Text(Name,X+Scale,Y+Scale,Color(12,12,12));
+  return TextScaled(Name,X+Scale,Y+Scale,Color(12,12,12),Scale);
 }

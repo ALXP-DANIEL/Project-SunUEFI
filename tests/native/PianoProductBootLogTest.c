@@ -154,6 +154,11 @@ int main(int Argc,char **Argv){
   // The first character C has a lit pixel at column0, row1.
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL GlyphPixel=Pixels[(LabelY+2*TextScale)*Width+LabelX+TextScale];
   assert(GlyphPixel.Red==12&&GlyphPixel.Green==12&&GlyphPixel.Blue==12);
+  // Last glyph must also be rendered at the label's intended 3x scale.
+  // The former Text() call drew small letters in a 3x-sized white panel,
+  // making the last glyph invisible at this coordinate in video evidence.
+  GlyphPixel=Pixels[(LabelY+2*TextScale)*Width+LabelX+(1+7*6)*TextScale];
+  assert(GlyphPixel.Red==12&&GlyphPixel.Green==12&&GlyphPixel.Blue==12);
   // Failure/warnings are sticky; never paint more pixels after a bad Blt.
   FailAt=Calls+3;Inject=EFI_WARN_UNKNOWN_GLYPH;Previous=Calls;
   assert(PianoProductBootLogVisualProbe(PianoProbeAfterUsb,2)==EFI_DEVICE_ERROR);
