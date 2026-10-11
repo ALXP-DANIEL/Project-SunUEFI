@@ -39,10 +39,11 @@ class ProductVisualProbeWiring(unittest.TestCase):
         self.assertIn('PianoProductBootLogVisualLabel(NativeName)',core)
         self.assertIn('PianoProbeAfterPostObserver',core)
         self.assertIn('mVisualNativeIndex==13))',core)
-        # Only the camera-identified ClockDxe at actual runtime ordinal13 has
-        # a shortened post-StartImage dwell and prolonged orange entry marker.
+        # Only camera-identified ClockDxe at actual runtime ordinal13 skips
+        # the post-StartImage Stall entirely; the next orange entry marker
+        # remains long so the camera can distinguish subsequent progress.
         self.assertEqual(core.count('AsciiStrCmp(Name,"ClockDxe")==0)?'),2)
-        self.assertIn(')?250000:1500000',core)
+        self.assertIn(')?0:1500000',core)
         self.assertIn(')?1500000:500000',core)
         self.assertIn('PianoProbeImmediatelyAfterStartImage,Name,PauseUs)',core)
         self.assertIn('PianoProbeAfterNative,Name,PauseUs)',core)

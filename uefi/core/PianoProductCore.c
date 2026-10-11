@@ -120,13 +120,15 @@ STATIC VOID ObserveLaunchBoundary(CONST CHAR8 *Name,BOOLEAN Before) {
   // scheduler is dependency-driven: brace actual ordinal13 as well, rather
   // than conflating its table index with the real launch sequence.
   if(Name!=NULL && (AsciiStrCmp(Name,"HALIOMMU")==0 || mVisualNativeIndex==13)) {
-    // IMG_9665.MOV identifies actual ordinal13 as ClockDxe and shows its
-    // lime-green StartImage-return witness, followed ~1.5s later by white
-    // without an observable orange post-observer-entry witness. Change only
-    // this return-side dwell to distinguish a delayed clock/scanout loss
-    // from a transition-associated failure; no native startup is bypassed.
+    // IMG_9666.MOV again shows the ClockDxe return-side lime for about 1.5s,
+    // although the previous candidate requested only a 0.25s Stall, then
+    // loses scanout without showing the post-observer orange witness. Do not
+    // call Stall at all after ClockDxe returns: paint lime and immediately
+    // enter the post-native callback so the next orange paint can distinguish
+    // a stuck/dilated Stall from an earlier GOP or execution failure. Keep
+    // all native starts and post-native observers intact.
     UINT32 PauseUs=(!Before && mVisualNativeIndex==13 &&
-      AsciiStrCmp(Name,"ClockDxe")==0)?250000:1500000;
+      AsciiStrCmp(Name,"ClockDxe")==0)?0:1500000;
     VisualProbe(Before?PianoProbeImmediatelyBeforeStartImage:
       PianoProbeImmediatelyAfterStartImage,Name,PauseUs);
   }
