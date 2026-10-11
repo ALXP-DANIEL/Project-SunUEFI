@@ -159,7 +159,7 @@ STATIC VOID ObserveRail(VOID){
     if(mDisplay.RailClose!=EFI_SUCCESS)mDisplay.Retained=TRUE;
   }
 }
-EFI_STATUS PianoProductDisplayStart(PIANO_PRODUCT_DISPLAY_ALIVE Alive){
+STATIC EFI_STATUS DisplayStart(PIANO_PRODUCT_DISPLAY_ALIVE Alive,BOOLEAN AhbOnly){
   if(!Alive)return EFI_INVALID_PARAMETER;if(mDisplay.Attempted)return EFI_ALREADY_STARTED;
   mDisplay.Attempted=TRUE;mDisplay.Alive=Alive;mDisplay.Status=EFI_NOT_STARTED;
   mDisplay.NonGdscStatus=EFI_NOT_STARTED;
@@ -178,13 +178,13 @@ EFI_STATUS PianoProductDisplayStart(PIANO_PRODUCT_DISPLAY_ALIVE Alive){
       .ReadCpu=PianoDisplayClockReadCpu,.ReadGcc=ReadGcc,.GetReadFailureEvidence=PianoDisplayClockReadFailureEvidence};
     S=PianoDisplayClockLeaseAcquire(&mDisplay.Lease,&Lease);
   }
-  if(S==EFI_SUCCESS&&!PianoProductDisplayOwnerRetained()){
+  if(S==EFI_SUCCESS&&!AhbOnly&&!PianoProductDisplayOwnerRetained()){
     // One cached CPU-only observation. No second native reference or rail
     // request is acquired; oem log replay never repeats these target loads.
     mDisplay.NonGdscStatus=PianoDisplayClockReadSnapshotClock(&mDisplay.Reader,PianoClockSelectNonGdscAhb,&mDisplay.NonGdsc);
     if(PianoProductDisplayOwnerRetained())S=mDisplay.NonGdscStatus==EFI_SUCCESS?EFI_COMPROMISED_DATA:mDisplay.NonGdscStatus;
   }
-  if(S==EFI_SUCCESS&&!PianoProductDisplayOwnerRetained()){
+  if(S==EFI_SUCCESS&&!AhbOnly&&!PianoProductDisplayOwnerRetained()){
     ObserveRail();
     if(PianoProductDisplayOwnerRetained())S=EFI_NOT_READY;
     else if(mDisplay.RailInit==EFI_SUCCESS&&mDisplay.RailObserve==EFI_SUCCESS){
@@ -205,6 +205,12 @@ EFI_STATUS PianoProductDisplayStart(PIANO_PRODUCT_DISPLAY_ALIVE Alive){
     else if(mDisplay.Reader.Signature){EFI_STATUS Close=PianoDisplayClockReadClose(&mDisplay.Reader);if(Close!=EFI_SUCCESS){mDisplay.Retained=TRUE;S=Close;}}
   }
   mDisplay.Status=S;PianoProductDisplayReplay();return S;
+}
+EFI_STATUS PianoProductDisplayStart(PIANO_PRODUCT_DISPLAY_ALIVE Alive){
+  return DisplayStart(Alive,FALSE);
+}
+EFI_STATUS PianoProductDisplayStartAhbOnly(PIANO_PRODUCT_DISPLAY_ALIVE Alive){
+  return DisplayStart(Alive,TRUE);
 }
 STATIC VOID CopyAcquire(PIANO_PRODUCT_DISPLAY_STARTUP_REPORT *R){
   CONST PIANO_DISPLAY_CLOCK_LEASE_REPORT *L=&mDisplay.Lease.Report;

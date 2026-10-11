@@ -16,8 +16,18 @@ SPEC.loader.exec_module(CLOCK)
 class InheritedClockTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        catalog = json.loads((ROOT / 'private/analysis/native-driver-inventory.json').read_text())
-        cls.source = Path(catalog['drivers']['ClockDxe']['pe_path'])
+        inventory = ROOT / 'private/analysis/native-driver-inventory.json'
+        if inventory.is_file():
+            catalog = json.loads(inventory.read_text())
+            cls.source = Path(catalog['drivers']['ClockDxe']['pe_path'])
+        else:
+            # Public/CI checkouts have the same immutable, manifest-pinned
+            # capture but not the maintainer's private analysis inventory.
+            manifest = json.loads((ROOT / 'vendor/piano/manifest.json').read_text())
+            cls.source = ROOT / 'vendor/piano/native/ClockDxe.efi'
+            recorded = manifest['files']['native/ClockDxe.efi'] if 'files' in manifest else manifest['native/ClockDxe.efi']
+            raw = cls.source.read_bytes()
+            assert len(raw) == recorded['bytes'] and hashlib.sha256(raw).hexdigest() == recorded['sha256']
         cls.original = cls.source.read_bytes()
 
     def test_exact_six_bytes_return_zero_and_unchanged_abi(self):

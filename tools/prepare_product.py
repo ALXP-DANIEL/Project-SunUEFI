@@ -472,7 +472,10 @@ def prepare(root=ROOT):
     text+=SETUP_DSC_ADDITIONS
     # All service flags bind actual product implementations; diagnostics are
     # not dispatched. FETCH enables the shared live SMMU storage guard.
-    text+='\n[BuildOptions]\n  GCC:*_CLANGPDB_AARCH64_CC_FLAGS = '+ ' '.join('-D'+flag for flag in (*PRODUCT_FLAGS,'PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE=1'))+'\n'
+    # Keep the camera-observed native ordinal witnesses while testing the
+    # independently owned GCC display-AHB reference. No other clock/rail child
+    # acquisition is enabled by this experimental feature flag.
+    text+='\n[BuildOptions]\n  GCC:*_CLANGPDB_AARCH64_CC_FLAGS = '+ ' '.join('-D'+flag for flag in (*PRODUCT_FLAGS,'PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE=1','PIANO_EXPERIMENT_GCC_AHB_ONLY=1'))+'\n'
     dsc.write_text(text)
     fdf=target/'pianoProduct.fdf';text=fdf.read_text().replace('# Host-only stage-0 diagnostic; NOT hardware validated.','# Single PianoUEFI product integration candidate; INCOMPLETE_NOT_RELEASE.')
     text=text.replace('SiliciumPkg/Drivers/SimpleFbDxe/SimpleFbDxe.inf','pianoProductPkg/Drivers/PianoGopDxe/PianoGopDxe.inf')
@@ -489,6 +492,9 @@ def prepare(root=ROOT):
     verify_os_boot(root,staged/'Applications/ProductCore',os_boot)
     verify_observation_families(root,staged/'Applications/ProductCore',observation)
     verify_provider(root,staged/'Applications/ProductCore',late_provider)
+    from piano_inherited_clock import DERIVED_SHA256
+    if native_id['ClockDxe']['pe_sha256'] != DERIVED_SHA256:
+        raise ValueError('GCC-AHB experiment requires the exact pinned derived ClockDxe')
     manifest={'target':'product','artifact':contract['artifact'],'status':'INCOMPLETE_NOT_RELEASE',
       'features':contract['features'],'shared_core':True,'entry_points':contract['entry_points'],'entry_policy_only':True,
       'fastboot_mode':'resident_background','fastboot_surfaces':contract['fastboot']['available_in'],
@@ -503,6 +509,12 @@ def prepare(root=ROOT):
       'low_memory_contract':low_memory_contract,
       'display_mapping':display_contract,
       'visual_phase_probe':VISUAL_PHASE_PROBE,
+      'experimental_gcc_ahb_only':{
+         'enabled':True,
+         'scope':'Native typed GCC DISP_AHB clock reference; no non-GDSC child or rail operation',
+         'native_clock_identity':DERIVED_SHA256,
+         'physical_panel_validated':False,
+         'hardware_side_effects_possible':True},
       'native_late_handoff':handoff_hooks,'late_provider':late_provider,
       'vendor_inputs':vendor_record,
       'platform_files':{str(path.relative_to(target)):sha(path)for path in sorted(target.rglob('*'))if path.is_file()},

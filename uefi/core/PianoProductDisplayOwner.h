@@ -3,6 +3,9 @@
 #include "PianoProductOwners.h"
 typedef BOOLEAN (EFIAPI *PIANO_PRODUCT_DISPLAY_ALIVE)(VOID);
 EFI_STATUS PianoProductDisplayStart(PIANO_PRODUCT_DISPLAY_ALIVE Alive);
+// Experimental: retain only the independently verified GCC DISP_AHB clock
+// reference. Do not observe/acquire the unresolved non-GDSC rail child.
+EFI_STATUS PianoProductDisplayStartAhbOnly(PIANO_PRODUCT_DISPLAY_ALIVE Alive);
 EFI_STATUS PianoProductDisplayStartup(PIANO_PRODUCT_DISPLAY_STARTUP_REPORT *Report);
 EFI_STATUS PianoProductDisplayStop(VOID *Context,PIANO_PRODUCT_DISPLAY_RETIRE_REPORT *Report);
 EFI_STATUS PianoProductDisplayReplay(VOID);

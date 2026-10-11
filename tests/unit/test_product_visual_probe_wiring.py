@@ -14,7 +14,20 @@ class ProductVisualProbeWiring(unittest.TestCase):
         self.assertIn('product_dsc.count',package)
         self.assertIn('core_make',package)
         self.assertIn('#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE',core)
-        self.assertNotIn('PIANO_EXPERIMENT_GCC_AHB_ONLY',core)
+        self.assertIn('#ifdef PIANO_EXPERIMENT_GCC_AHB_ONLY',core)
+        self.assertIn('PianoProductDisplayStartAhbOnly(BootLogAlive)',core)
+        self.assertIn('PianoProductDisplayStartup(&mDisplayStartup)',core)
+        self.assertIn('PianoProductDisplayOwnerRetained()',core)
+        self.assertIn('mDisplayStartup.KnownNoSideEffects',core)
+        self.assertIn('mDisplayStartup.OwnedReferences!=1',core)
+        self.assertIn('!mDisplayStartup.AcquireAttempted',core)
+        self.assertIn('mDisplayStartup.LeaseContext==NULL',core)
+        self.assertIn("'PIANO_EXPERIMENT_GCC_AHB_ONLY=1'",prep)
+        self.assertIn("'experimental_gcc_ahb_only'",prep)
+        self.assertLess(core.index('PianoProbeFoundation();'),
+                        core.index('PianoProductDisplayStartAhbOnly(BootLogAlive)'))
+        self.assertLess(core.index('PianoProductDisplayStartAhbOnly(BootLogAlive)'),
+                        core.index('PianoUfsSetProbeAction(InitUfs)'))
         self.assertLess(core.index('VisualProbe(PianoProbeBeforeFoundation,NULL,3500000)'),
                         core.index('PianoProbeFoundation();'))
         self.assertLess(core.index('PianoProbeFoundation();'),

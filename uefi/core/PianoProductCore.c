@@ -301,8 +301,31 @@ EFI_STATUS EFIAPI PianoProductCoreEntry(EFI_HANDLE Image,EFI_SYSTEM_TABLE *Syste
   VisualProbe(PianoProbeAfterFoundation,NULL,3500000);
 #endif
   ObserveDisplay("after-foundation");
+#ifdef PIANO_EXPERIMENT_GCC_AHB_ONLY
+  // Physical Test103 demonstrated exact native GCC display-AHB ref 0->1,
+  // HW enable readback, and clean 1->0 retirement. This experiment only
+  // reuses that bounded owner; it does NOT acquire the still-unproved
+  // non-GDSC child, issue MM/VCS power votes, or write clock MMIO directly.
+  // A failed/uncertain native acquire must never be classified as absent.
+  Status=PianoProductDisplayStartAhbOnly(BootLogAlive);
+  if(!BootLogAlive())FailStop(EFI_ABORTED);
+  EFI_STATUS DisplayReport=PianoProductDisplayStartup(&mDisplayStartup);
+  if(!BootLogAlive())FailStop(EFI_ABORTED);
+  if(DisplayReport!=Status || PianoProductDisplayOwnerRetained() ||
+     (Status==EFI_SUCCESS &&
+       (!mDisplayStartup.Held || !mDisplayStartup.AcquireAttempted ||
+        mDisplayStartup.OwnedReferences!=1 || mDisplayStartup.LeaseContext==NULL ||
+        mDisplayStartup.Retained || mDisplayStartup.ServicesLost ||
+        mDisplayStartup.KnownNoSideEffects)) ||
+     (Status!=EFI_SUCCESS && !EFI_ERROR(Status)) ||
+     (Status!=EFI_SUCCESS && !mDisplayStartup.KnownNoSideEffects))
+    FailStop(Status==EFI_SUCCESS?EFI_COMPROMISED_DATA:Status);
+  DEBUG((DEBUG_WARN,"PIANO_EXPERIMENT_GCC_AHB_ONLY acquire=%r held=%u owned=%u absent_clean=%u child_skipped=1 rail_skipped=1 display_physical_validated=0\n",
+    Status,mDisplayStartup.Held,mDisplayStartup.OwnedReferences,mDisplayStartup.KnownNoSideEffects));
+#else
   mDisplayStartup=(PIANO_PRODUCT_DISPLAY_STARTUP_REPORT){.Revision=1,.KnownNoSideEffects=TRUE,.Status=EFI_NOT_STARTED};
   DEBUG((DEBUG_WARN,"PIANO_PRODUCT_DISPLAY_START status=%r inherited_gop=1 display_owner_refs=0 native_cesta_retention=7 display_cesta_auto_init_deferred=1 display_pll_auto_init_deferred=1 native_refs_exit_release_verified=0\n",mDisplayStartup.Status));
+#endif
   ObserveDisplay("after-display-lease");
   // Real protected SMEM observations precede product DMA owners. Failure with
   // exact handler cleanup leaves data unknown; retained ownership cannot be
