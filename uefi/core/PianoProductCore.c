@@ -119,9 +119,17 @@ STATIC VOID ObserveLaunchBoundary(CONST CHAR8 *Name,BOOLEAN Before) {
   // HALIOMMU visibly starts at ordinal10, not ordinal13. The native
   // scheduler is dependency-driven: brace actual ordinal13 as well, rather
   // than conflating its table index with the real launch sequence.
-  if(Name!=NULL && (AsciiStrCmp(Name,"HALIOMMU")==0 || mVisualNativeIndex==13))
+  if(Name!=NULL && (AsciiStrCmp(Name,"HALIOMMU")==0 || mVisualNativeIndex==13)) {
+    // IMG_9665.MOV identifies actual ordinal13 as ClockDxe and shows its
+    // lime-green StartImage-return witness, followed ~1.5s later by white
+    // without an observable orange post-observer-entry witness. Change only
+    // this return-side dwell to distinguish a delayed clock/scanout loss
+    // from a transition-associated failure; no native startup is bypassed.
+    UINT32 PauseUs=(!Before && mVisualNativeIndex==13 &&
+      AsciiStrCmp(Name,"ClockDxe")==0)?250000:1500000;
     VisualProbe(Before?PianoProbeImmediatelyBeforeStartImage:
-      PianoProbeImmediatelyAfterStartImage,Name,1500000);
+      PianoProbeImmediatelyAfterStartImage,Name,PauseUs);
+  }
 }
 #endif
 STATIC EFI_STATUS ProductDebugReplay(VOID *Context) {
@@ -162,7 +170,11 @@ STATIC VOID ObserveNative(CONST CHAR8 *Name,BOOLEAN Before) {
   CHAR8 Phase[32];
   if(Name==NULL)FailStop(EFI_INVALID_PARAMETER);
 #ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
-  VisualProbe(Before?PianoProbeBeforeNative:PianoProbeAfterNative,Name,500000);
+  // Make the first post-ClockDxe orange witness long enough for the camera
+  // after the deliberately shorter lime dwell; preserve all observers.
+  UINT32 PauseUs=(!Before && mVisualNativeIndex==13 &&
+    AsciiStrCmp(Name,"ClockDxe")==0)?1500000:500000;
+  VisualProbe(Before?PianoProbeBeforeNative:PianoProbeAfterNative,Name,PauseUs);
 #endif
   AsciiSPrint(Phase,sizeof(Phase),"%a:%a",Before?"pre":"post",Name);
   EFI_STATUS Status=PianoDisplaySmmuObserve(Phase,BootLogAlive);

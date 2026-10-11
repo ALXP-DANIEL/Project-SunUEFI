@@ -27,7 +27,7 @@ class ProductVisualProbeWiring(unittest.TestCase):
                         core.index('VisualProbe(PianoProbeAfterUsb,NULL,500000)'))
         self.assertLess(core.index('VisualProbe(PianoProbeBeforeMenu,NULL,1000000)'),
                         core.index('PianoBootPolicyInitialize(Image)'))
-        self.assertIn('VisualProbe(Before?PianoProbeBeforeNative:PianoProbeAfterNative,Name,500000)',core)
+        self.assertIn('VisualProbe(Before?PianoProbeBeforeNative:PianoProbeAfterNative,Name,PauseUs)',core)
         self.assertIn('mVisualNativeIndex<63',core)
         native=(ROOT/'uefi/core/NativeProbe.c').read_text()
         self.assertIn('PianoNativeSetLaunchObserver(ObserveLaunchBoundary);',core)
@@ -39,6 +39,14 @@ class ProductVisualProbeWiring(unittest.TestCase):
         self.assertIn('PianoProductBootLogVisualLabel(NativeName)',core)
         self.assertIn('PianoProbeAfterPostObserver',core)
         self.assertIn('mVisualNativeIndex==13))',core)
+        # Only the camera-identified ClockDxe at actual runtime ordinal13 has
+        # a shortened post-StartImage dwell and prolonged orange entry marker.
+        self.assertEqual(core.count('AsciiStrCmp(Name,"ClockDxe")==0)?'),2)
+        self.assertIn(')?250000:1500000',core)
+        self.assertIn(')?1500000:500000',core)
+        self.assertIn('PianoProbeImmediatelyAfterStartImage,Name,PauseUs)',core)
+        self.assertIn('PianoProbeAfterNative,Name,PauseUs)',core)
+        self.assertIn('PianoProbeAfterPostObserver,Name,1500000)',core)
         self.assertLess(native.index('if(mNativeObserver)mNativeObserver(Image->Name,TRUE);'),
                         native.index('if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,TRUE);'))
         self.assertLess(native.index('if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,TRUE);'),
