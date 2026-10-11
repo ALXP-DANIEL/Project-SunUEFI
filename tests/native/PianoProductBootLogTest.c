@@ -122,7 +122,7 @@ int main(int Argc,char **Argv){
   Reset(800,600);Info.HorizontalResolution=Width;Info.VerticalResolution=Height;
   assert(PianoProductBootLogInitialize(&Gop,Alive)==EFI_SUCCESS);
   Previous=Calls;
-  assert(PianoProductBootLogVisualProbe((PIANO_PRODUCT_VISUAL_PHASE)7,0)==EFI_INVALID_PARAMETER&&Calls==Previous);
+  assert(PianoProductBootLogVisualProbe((PIANO_PRODUCT_VISUAL_PHASE)9,0)==EFI_INVALID_PARAMETER&&Calls==Previous);
   assert(PianoProductBootLogVisualProbe(PianoProbeAfterNative,64)==EFI_INVALID_PARAMETER&&Calls==Previous);
   assert(PianoProductBootLogVisualProbe(PianoProbeBeforeFoundation,0)==EFI_SUCCESS&&Calls==Previous+7);
   assert(Pixels[0].Red==0&&Pixels[0].Green==150&&Pixels[0].Blue==240);
@@ -138,6 +138,10 @@ int main(int Argc,char **Argv){
     UINT8 Expected=(13U&(1U<<Bit))?255:12;
     assert(Tile.Red==Expected&&Tile.Green==Expected&&Tile.Blue==Expected);
   }
+  assert(PianoProductBootLogVisualProbe(PianoProbeImmediatelyBeforeStartImage,13)==EFI_SUCCESS);
+  assert(Pixels[0].Red==240&&Pixels[0].Green==225&&Pixels[0].Blue==0);
+  assert(PianoProductBootLogVisualProbe(PianoProbeImmediatelyAfterStartImage,13)==EFI_SUCCESS);
+  assert(Pixels[0].Red==100&&Pixels[0].Green==255&&Pixels[0].Blue==90);
   // Failure/warnings are sticky; never paint more pixels after a bad Blt.
   FailAt=Calls+3;Inject=EFI_WARN_UNKNOWN_GLYPH;Previous=Calls;
   assert(PianoProductBootLogVisualProbe(PianoProbeAfterUsb,2)==EFI_DEVICE_ERROR);

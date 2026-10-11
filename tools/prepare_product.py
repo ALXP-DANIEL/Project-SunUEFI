@@ -45,7 +45,8 @@ VISUAL_PHASE_PROBE={
     'enabled':True,'compile_flag':'PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE=1',
     'method':'Inherited GOP EfiBltVideoFill; no SetMode, MMIO or direct framebuffer writes',
     'phases':['before-foundation','before-native','after-native','after-foundation',
-              'after-ufs','after-usb','before-menu'],
+              'after-ufs','after-usb','before-menu',
+              'immediately-before-HALIOMMU-StartImage','immediately-after-HALIOMMU-StartImage'],
     'native_ordinal_tiles':6,'physical_scanout_validated':False,
     'physical_test_performed':False,'release_allowed':False}
 NATIVE_NAMES=('SmemDxe','DALSys','ChipInfo','PlatformInfoDxeDriver','HWIODxeDriver','ULogDxe',

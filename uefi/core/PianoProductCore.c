@@ -28,6 +28,7 @@
 #include <Library/FdtLib.h>
 VOID PianoProbeFoundation(VOID);
 VOID PianoNativeSetObserver(VOID (*Observer)(CONST CHAR8 *,BOOLEAN));
+VOID PianoNativeSetLaunchObserver(VOID (*Observer)(CONST CHAR8 *,BOOLEAN));
 VOID PianoProbeUfs(CONST VOID *Fdt);
 VOID PianoUfsSetProbeAction(EFI_STATUS (*Action)(CONST VOID *));
 EFI_STATUS PianoUfsReadOnlyDmaExperiment(CONST VOID *Fdt);
@@ -111,6 +112,14 @@ STATIC VOID VisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,CONST CHAR8 *NativeName
     gBS->Stall(PauseUs);
     if(!BootLogAlive())FailStop(EFI_ABORTED);
   }
+}
+STATIC VOID ObserveLaunchBoundary(CONST CHAR8 *Name,BOOLEAN Before) {
+  // Only the identified HALIOMMU boundary gets extra GOP operations.
+  // Purple #13 precedes three read-only pre-start observers; yellow #13
+  // proves they returned. Lime #13 proves StartImage returned as well.
+  if(Name!=NULL && AsciiStrCmp(Name,"HALIOMMU")==0)
+    VisualProbe(Before?PianoProbeImmediatelyBeforeStartImage:
+      PianoProbeImmediatelyAfterStartImage,Name,1500000);
 }
 #endif
 STATIC EFI_STATUS ProductDebugReplay(VOID *Context) {
@@ -259,7 +268,13 @@ EFI_STATUS EFIAPI PianoProductCoreEntry(EFI_HANDLE Image,EFI_SYSTEM_TABLE *Syste
   if(!BootLogAlive())FailStop(EFI_ABORTED);
   ObserveDisplay("before-foundation");
   PianoNativeSetObserver(ObserveNative);
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  PianoNativeSetLaunchObserver(ObserveLaunchBoundary);
+#endif
   PianoProbeFoundation();
+#ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE
+  PianoNativeSetLaunchObserver(NULL);
+#endif
   PianoNativeSetObserver(NULL);
   if(!BootLogAlive())FailStop(EFI_ABORTED);
 #ifdef PIANO_EXPERIMENT_DISPLAY_PHASE_PROBE

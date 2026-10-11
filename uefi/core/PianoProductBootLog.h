@@ -15,7 +15,7 @@ EFI_STATUS PianoProductBootLogInitialize(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
 EFI_STATUS PianoProductBootLogStage(CONST CHAR8 *Name,EFI_STATUS Status,
                                    UINT64 ElapsedMs);
 
-// Experimental visual-only stage probe. Seven distinct solid colors and six
+// Experimental visual-only stage probe. Nine distinct solid colors and six
 // large binary tiles (least significant bit at left) identify the last GOP
 // Blt attempt even when USB service/RAM logs become unavailable. Index 1..63
 // denotes the actual native StartImage sequence, not a hardcoded driver list.
@@ -27,6 +27,8 @@ typedef enum {
   PianoProbeAfterFoundation=3,
   PianoProbeAfterUfs=4,
   PianoProbeAfterUsb=5,
-  PianoProbeBeforeMenu=6
+  PianoProbeBeforeMenu=6,
+  PianoProbeImmediatelyBeforeStartImage=7,
+  PianoProbeImmediatelyAfterStartImage=8
 } PIANO_PRODUCT_VISUAL_PHASE;
 EFI_STATUS PianoProductBootLogVisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,UINT32 NativeIndex);

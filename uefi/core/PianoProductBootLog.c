@@ -133,7 +133,7 @@ EFI_STATUS PianoProductBootLogStage(CONST CHAR8 *Name,EFI_STATUS Status,UINT64 E
 EFI_STATUS PianoProductBootLogVisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,UINT32 NativeIndex){
   // Intentional full-screen color replacement: this is a temporary binary
   // diagnostic, not a user-facing GUI or hardware scanout readiness test.
-  if(Phase>PianoProbeBeforeMenu||NativeIndex>63)return EFI_INVALID_PARAMETER;
+  if(Phase>PianoProbeImmediatelyAfterStartImage||NativeIndex>63)return EFI_INVALID_PARAMETER;
   if(!mCanvas.Gop||!mCanvas.Alive)return EFI_NOT_STARTED;
   if(mCanvas.Fault!=EFI_SUCCESS)return mCanvas.Fault;
   if(!mCanvas.Alive())return mCanvas.Fault=EFI_ABORTED;
@@ -144,7 +144,9 @@ EFI_STATUS PianoProductBootLogVisualProbe(PIANO_PRODUCT_VISUAL_PHASE Phase,UINT3
     {0,175,75},    // After all foundation drivers: green
     {0,180,190},   // After UFS: cyan
     {200,35,45},   // After USB: red
-    {20,35,125}    // Before policy/menu: navy
+    {20,35,125},   // Before policy/menu: navy
+    {240,225,0},   // Exact StartImage entry: yellow
+    {100,255,90}   // Exact StartImage return: bright lime
   };
   EFI_GRAPHICS_OUTPUT_BLT_PIXEL Background=Color(Rgb[Phase][0],Rgb[Phase][1],Rgb[Phase][2]);
   EFI_STATUS S=Rect(Background,0,0,mCanvas.Width,mCanvas.Height);

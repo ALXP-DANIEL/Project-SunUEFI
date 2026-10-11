@@ -14,8 +14,14 @@
 STATIC EFI_HANDLE mNativeLoaded[ARRAY_SIZE(mNativeImages)];
 STATIC BOOLEAN mFoundationAttempted,mFoundationRunning;
 STATIC VOID (*mNativeObserver)(CONST CHAR8 *,BOOLEAN);
+STATIC VOID (*mNativeLaunchObserver)(CONST CHAR8 *,BOOLEAN);
 VOID PianoNativeSetObserver(VOID (*Observer)(CONST CHAR8 *,BOOLEAN)) {
   mNativeObserver=Observer;
+}
+// Optional synchronous boundaries for differentiating pre-start observers
+// from the vendor driver's actual StartImage execution. No driver is skipped.
+VOID PianoNativeSetLaunchObserver(VOID (*Observer)(CONST CHAR8 *,BOOLEAN)) {
+  mNativeLaunchObserver=Observer;
 }
 EFI_STATUS PianoNativeGetLoadedImage(CONST EFI_GUID *FileGuid,EFI_HANDLE *Handle) {
   if(FileGuid==NULL||Handle==NULL)return EFI_INVALID_PARAMETER;
@@ -101,7 +107,9 @@ VOID PianoProbeFoundation(VOID) {
         if(!EFI_ERROR(Status)) {
           DEBUG((DEBUG_WARN,"SUNUEFI_NATIVE_START %a\n",Image->Name));
           if(mNativeObserver)mNativeObserver(Image->Name,TRUE);
+          if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,TRUE);
           Status=gBS->StartImage(Handle,NULL,NULL);
+          if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,FALSE);
           if(mNativeObserver)mNativeObserver(Image->Name,FALSE);
           // A successfully started foundation driver must remain loaded.
           if(EFI_ERROR(Status))gBS->UnloadImage(Handle);

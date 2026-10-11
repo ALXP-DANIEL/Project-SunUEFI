@@ -71,3 +71,40 @@ are *interventions* in this run; the absence of USB within roughly a minute
 does not independently identify the white-screen root cause. Await the
 operator's visual marker record and Android recovery, then narrow the next
 candidate. This binary is an instrument, not a fix.
+
+## Repeated physical run: camera-confirmed display transition
+
+The operator supplied a 19.808-second 3840x2160 video `IMG_9663.MOV`,
+SHA-256
+`a82edcea03b059f99b8064db89249f5cee7bea593b2dfb847e3a80a374285f25`.
+The file is retained in the conversation, not shipped in this repository.
+
+The video directly establishes that the physical panel shows the TianoCore
+splash (~0-1 s), the blue pre-foundation marker (~2-4 s), and both purple
+(before) and orange (after) native StartImage markers for earlier ordinal
+values. In the final purple marker (~17.5-17.7 s), left-to-right white tile
+positions 0,2,3 give binary LSB-first value 1+4+8=13. The next filmed
+state, by approximately 17.8 s, is uniformly white. No orange after-native
+marker for ordinal13 appears in the recorded video. This validates visible
+GOP scanout *until that purple marker*, not later.
+
+There are exactly 13 entries in the production `mNativeImages` table and
+the final entry is `HALIOMMU`. Thirteen real before-StartImage callback
+entries therefore imply that the last purple marker is for HALIOMMU,
+independent of whether preceding DEPEX ordering changed. Its display
+loss is bounded **after** that before-observer starts, **before** its
+after-observer produces a visible orange marker. This is not proof of a
+specific SMMU register mutation: the before-observer itself performs
+bounded GOP/SMMU/CPU/clock observations *after* painting purple but
+*before* HALIOMMU StartImage. Nor does an invisible after-marker prove
+StartImage never returned. Do not claim HALIOMMU alone is the root cause.
+
+The repeated one-shot fastboot boot was accepted, with no flash operation.
+As with the first run, neither SunUEFI Fastboot nor Android ADB enumerated
+within approximately a minute. Android recovery after this repeated
+run remains operator-unconfirmed at the time of this report.
+
+The follow-up `experiment/pianoboot-haliommu-bracket` only adds explicit
+colored GOP witnesses on both sides of the *actual* HALIOMMU StartImage.
+It does not skip HALIOMMU, change MMIO/clock/GOP mode, or continue to
+DMA-capable UFS/USB with missing IOMMU initialization.

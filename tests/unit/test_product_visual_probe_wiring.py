@@ -29,6 +29,20 @@ class ProductVisualProbeWiring(unittest.TestCase):
                         core.index('PianoBootPolicyInitialize(Image)'))
         self.assertIn('VisualProbe(Before?PianoProbeBeforeNative:PianoProbeAfterNative,Name,500000)',core)
         self.assertIn('mVisualNativeIndex<63',core)
+        native=(ROOT/'uefi/core/NativeProbe.c').read_text()
+        self.assertIn('PianoNativeSetLaunchObserver(ObserveLaunchBoundary);',core)
+        self.assertIn('PianoNativeSetLaunchObserver(NULL);',core)
+        self.assertIn('AsciiStrCmp(Name,"HALIOMMU")==0',core)
+        self.assertIn('PianoProbeImmediatelyBeforeStartImage',core)
+        self.assertIn('PianoProbeImmediatelyAfterStartImage',core)
+        self.assertLess(native.index('if(mNativeObserver)mNativeObserver(Image->Name,TRUE);'),
+                        native.index('if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,TRUE);'))
+        self.assertLess(native.index('if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,TRUE);'),
+                        native.index('Status=gBS->StartImage(Handle,NULL,NULL);'))
+        self.assertLess(native.index('Status=gBS->StartImage(Handle,NULL,NULL);'),
+                        native.index('if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,FALSE);'))
+        self.assertLess(native.index('if(mNativeLaunchObserver)mNativeLaunchObserver(Image->Name,FALSE);'),
+                        native.index('if(mNativeObserver)mNativeObserver(Image->Name,FALSE);'))
 
     def test_gop_only_no_modeset_or_mmio(self):
         log=(ROOT/'uefi/core/PianoProductBootLog.c').read_text()
